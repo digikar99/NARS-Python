@@ -463,6 +463,27 @@ def train(x_train, y_train, cycles):
                                            + '\n' + str(round(i * 100 / cycles, 2)) + "%")
             global_gui.update_spotlight()
 
+def calculate_confusion_matrix(y_correct, y_prediction, print_matrix=True):
+    uniq = [-1] + list(np.unique(y_correct))
+    y_to_uniq_id = dict()
+    for idx, y in enumerate(uniq): y_to_uniq_id[y] = idx+1
+
+    confusion_matrix = np.zeros((len(uniq)+1, len(uniq)+1))
+    for i in range(1, len(uniq)+1):
+        confusion_matrix[i, 0] = uniq[i-1]
+        confusion_matrix[0, i] = uniq[i-1]
+    for yc, yp in zip(y_correct, y_prediction):
+        yc_id = y_to_uniq_id[yc]
+        yp_id = y_to_uniq_id[yp]
+        confusion_matrix[yc_id, yp_id] += 1
+
+    if print_matrix:
+        print("CONFUSION MATRIX (Expected \\ Predicted)")
+        print(confusion_matrix)
+        print()
+
+    return confusion_matrix, uniq
+
 def test(bit,
          x_test,
          y_test):
@@ -484,6 +505,7 @@ def test(bit,
         correct_cnt_dict[i] = 0
         incorrect_cnt_dict[i] = 0
 
+    y_correct, y_prediction = [], []
     for test_idx,img_array in enumerate(x_test):
         label_y = y_test[test_idx]
         img = Image.fromarray(img_array)
@@ -527,6 +549,9 @@ def test(bit,
 
         global_gui.update_test_accuracy(accuracy=accuracy)
 
+        y_prediction.append(prediction)
+        y_correct.append(label_y)
+
         if test_idx >= 9 and accuracy < 0.001:
             print("Aborting trial, parameters could not identify anything in 10 tests.")
             break
@@ -546,6 +571,8 @@ def test(bit,
           + " | " + str(incorrect_examples_total_cnt)
           + " | " + str(correct_examples_total_cnt + incorrect_examples_total_cnt))
     print('=!=========!= OVERALL TOTAL Test Accuracy: ' + str(total_accuracy) + "%")
+
+    calculate_confusion_matrix(y_correct, y_prediction, print_matrix=True)
 
     # fitness function
     return total_accuracy
